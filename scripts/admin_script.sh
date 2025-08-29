@@ -26,7 +26,8 @@ show_menu() {
   echo "4) Endre autentisering"
   echo "5) Start/stop webserver"
   echo "6) Vis brukere og siste login"
-  echo "7) Avslutt"
+  echo "7) Vis grupper"
+  echo "8) Avslutt"
   echo "========================"
 }
 
@@ -43,8 +44,9 @@ create_user(){
  echo "$username:$password" | chpasswd
 
  echo "Bruker $username er blitt opprettet. "
- echo "Epost blir sendt til $email_addr " 
-
+ echo "Epost blir sendt til $email_addr "
+ echo "Bruker med $username er blitt opprettet!" | mail -s "Ny bruker opprettet" "$email_addr"
+ 
 }
 
 
@@ -56,7 +58,7 @@ delete_user(){
  fi 
 
  current_user=${SUDO_USER:-$USER} #SUDO_USER utgjør brukeren som kjører scriptet
- if [["$username" == "$current_user"]]; then 
+ if [[ "$username" == "$current_user" ]]; then 
    echo "Nåverende bruker kan ikke slettes!"
    return
  fi 
@@ -73,15 +75,82 @@ delete_user(){
  fi 
 }
 
+group_manager(){
+ echo "Du får nå følgende valg: "
+ echo "1) Opprette en ny gruppe" 
+ echo "2) Legge til en bruker i en eksisterende gruppe"
+ echo "3) Endre tilhørigheten til en bruker i en gruppe"
+ read -rp "Velg: " choice 
+
+ case $choice in
+   1)
+     read -rp "Skriv inn gruppenavn: " group_name
+     if getent group "$group_name" > /dev/null 2>&1; then
+       echo "Gruppe $group_name finnes allerede!"
+     else 
+       groupadd "$group_name"
+       echo "Gruppe $group_name har blitt opprettet"
+     fi
+     ;;
+   2) 
+     read -rp "Brukernavn: " username
+     read -rp "Gruppenavn: " group_name
+     if ! id "$username" &>/dev/null; then 
+       echo "Brukeren $username finnes ikke!"
+       return 
+     fi
+     if ! getent group "$group_name" > /dev/null 2>&1; then 
+       echo "Gruppen $group_name finnes ikke! Enten har du skrevet feil eller så må den opprettes." 
+       return 
+     fi
+     usermod -aG "$group_name" "$username"
+     echo "Bruker $username er lagt til i $group_name"
+     ;;
+   3) 
+     read -rp "Brukernavn: " username
+     read -rp "Ny primærgruppe: " group_name
+     if ! id "$username" &>/dev/null; then 
+       echo "Brukeren $username finnes ikke!"
+       return 
+     fi
+     if ! getent group "$group_name" > /dev/null 2>&1; then
+       echo "Gruppen $group_name finnes ikke! Enten har du skrevet feil eller så må den opprettes."
+       return 
+     fi
+     usermod -g "$group_name" "$username"
+     echo "Primærgruppe for $username er nå $group_name" 
+     ;;
+   *)
+     echo "Ugyldig valg!"
+  esac
+}
+
+show_groups(){
+  echo "========================"
+  echo "   Grupper og brukere"
+  echo "========================"
+  # getent group henter alle grupper i /etc/group
+  # cut -d: -f1,4 viser bare gruppenavn og brukermedlemmer
+  getent group | cut -d: -f1,4 | while IFS=: read -r group users; do
+    if [[ -n "$users" ]]; then
+      echo "Gruppe: $group"
+      echo "  Brukere: $users"
+    else
+      echo "Gruppe: $group"
+      echo "  (ingen brukere)"
+    fi
+    echo
+  done
+}
 
 
-
+#-------------------------------------
 main() {
   require_root
 
   while true; do
     show_menu
-    read -rp "Velg et alternativ [1-7]: " choice
+    read -rp "Velg et alternativ [1-8]: " choice
     case $choice in
       1)
 	echo "Oppretter bruker --->"
@@ -94,7 +163,8 @@ main() {
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       3)
-        echo "[TODO] Endre gruppe / lag ny gruppe"
+        echo "Oppretter ny gruppe/endrer gruppe --->"
+	group_manager
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       4)
@@ -110,6 +180,10 @@ main() {
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       7)
+	show_groups
+	read -rp "Trykk enter for å fortsette..." dummy
+	;;
+      8)
         echo "Avslutter..."
         exit 0
         ;;

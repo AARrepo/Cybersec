@@ -2,9 +2,7 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
-# admin_tool.sh — CyberSec del 1
-# Kjøring:
-#   sudo ./admin_tool.sh
+# — CyberSec del 1
 
 SCRIPT_NAME=$(basename "$0")
 
@@ -144,6 +142,31 @@ show_groups(){
 }
 
 
+change_authentication() {
+  read -rp "Brukernavn du ønsker å endre autentisering for: " username
+
+  if ! id "$username" &>/dev/null; then
+    echo "Brukeren $username finnes ikke!"
+    return
+  fi
+
+  echo "Setter opp OTP for $username..."
+  echo "Følg instruksjonene i terminalen for å konfigurere Google Authenticator."
+
+  # Kjører google-authenticator som brukeren (interaktivt første gang)
+  # Går inn i brukeren sin shell og skriver inn kommandoen nedenfor
+  su - "$username" -c "google-authenticator"
+
+  # Loggfører at OTP er aktivert
+  # Loggen vil ligge i var/log/ og dette ligger i rot katalogen ikke hjemmekatalogen
+  log_file="/var/log/admin_tool_auth.log"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') : OTP aktivert for bruker $username" >> "$log_file"
+
+  echo "OTP er nå aktivert for $username. Brukeren må bruke Authenticator-app ved neste innlogging."
+}
+
+
+
 #-------------------------------------
 main() {
   require_root
@@ -168,7 +191,8 @@ main() {
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       4)
-        echo "[TODO] Endre autentisering"
+        echo "Endrer autentisering ---> "
+        change_authentication
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       5)
@@ -195,7 +219,6 @@ main() {
   done
 }
 
-#TESTING AV GIT
 
 main "$@"
 

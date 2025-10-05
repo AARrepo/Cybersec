@@ -43,7 +43,7 @@ create_user(){
 
  echo "Bruker $username er blitt opprettet. "
  echo "Epost blir sendt til $email_addr "
- echo "Bruker med $username er blitt opprettet!" | mail -s "Ny bruker opprettet" "$email_addr"
+ echo "Velkommen til supertenter familien $username! Dette vil være din nye bruker på linux Ubuntu versjon 24.04.3 LTS . Passordet ditt er persnolig og skal ikke deles med noen." | mail -s "Ny bruker opprettet" "$email_addr"
  
 }
 

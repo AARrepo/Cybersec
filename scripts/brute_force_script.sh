@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Juster disse variablene:
-target="https://filsett.local/login.php"   # eller "http://127.0.0.1/filsett/login.php"
+
+target="http://<SERVER_IP>/login.php"   # eller "http://filsett/login.php" som server-navn
 tries=30                                   # antall POSTs
 delay=0.5                                  # sekunder mellom hver request
 

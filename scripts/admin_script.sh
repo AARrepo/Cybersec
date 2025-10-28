@@ -124,18 +124,15 @@ group_manager(){
 }
 
 show_groups(){
-  echo "========================"
-  echo "   Grupper og brukere"
-  echo "========================"
   # getent group henter alle grupper i /etc/group
   # cut -d: -f1,4 viser bare gruppenavn og brukermedlemmer
   getent group | cut -d: -f1,4 | while IFS=: read -r group users; do
     if [[ -n "$users" ]]; then
       echo "Gruppe: $group"
-      echo "  Brukere: $users"
+      echo "  Brukere i gruppe: $users"
     else
       echo "Gruppe: $group"
-      echo "  (ingen brukere)"
+      echo "  (ingen brukere i denne gruppe)"
     fi
     echo
   done
@@ -166,6 +163,57 @@ change_authentication() {
 }
 
 
+start_stop_webserver() {
+  echo "========================"
+  echo " Webserver funksjons meny"
+  echo "========================"
+  echo "1) Start webserver"
+  echo "2) Stopp webserver"
+  echo "3) Restart webserver"
+  echo "========================"
+  read -rp "Velg et alternativ: " ws_choice
+
+  case $ws_choice in
+    1)
+      systemctl start apache2
+      echo "Webserveren er startet."
+      ;;
+    2)
+      systemctl stop apache2
+      echo "Webserveren er stoppet."
+      ;;
+    3)
+      systemctl restart apache2
+      echo "Apache2 er restartet."
+      ;;
+    *)
+      echo "Ugyldig valg!"
+      ;;
+  esac
+}
+
+
+show_users() {
+  echo "========================"
+  echo "   Brukere og siste login"
+  echo "========================"
+
+  # Henter alle brukere med UID >= 1000 (viser de vanlige brukere)
+  getent passwd | awk -F: '$3 >= 1000 {print $1}' | while read -r user; do
+    # Henter grupper brukeren tilhører
+    groups_list=$(id -nG "$user")
+    
+    # Henter siste innlogging (kan være "never logged in")
+    last_login=$(lastlog -u "$user" | tail -n 1 | awk '{$1=""; print substr($0,2)}')
+
+    echo "Bruker: $user"
+    echo "  Gruppe/Grupper: $groups_list"
+    echo "  Siste innlogging: $last_login"
+    echo "------------------------"
+  done
+}
+
+
 
 #-------------------------------------
 main() {
@@ -176,18 +224,18 @@ main() {
     read -rp "Velg et alternativ [1-8]: " choice
     case $choice in
       1)
-	echo "Oppretter bruker --->"
-	create_user
+	      echo "Oppretter bruker --->"
+	      create_user
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       2)
         echo "Sletter bruker --->"
-	delete_user
+	      delete_user
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       3)
         echo "Oppretter ny gruppe/endrer gruppe --->"
-	group_manager
+	      group_manager
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       4)
@@ -196,17 +244,21 @@ main() {
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       5)
-        echo "[TODO] Start/stop webserver"
+        echo "Start/stop webserver --->"
+        start_stop_webserver
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       6)
-        echo "[TODO] Vis brukere og siste login"
+        echo "Viser brukere, deres gruppe og siste innlogging"
+        show_users
         read -rp "Trykk enter for å fortsette..." dummy
         ;;
       7)
-	show_groups
-	read -rp "Trykk enter for å fortsette..." dummy
-	;;
+        echo "Liste over kun grupper:"
+        echo "-------------------------" 
+	      show_groups
+	      read -rp "Trykk enter for å fortsette..." dummy
+	      ;;
       8)
         echo "Avslutter..."
         exit 0
